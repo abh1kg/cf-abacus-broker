@@ -5,8 +5,12 @@ const moment = require('abacus-moment');
 const request = require('abacus-request');
 
 const oauth = require('abacus-oauth');
+
+const commander = require('commander');
 const _ = require('underscore');
 const extend = _.extend;
+const clone = _.clone;
+
 
 const testHelper = require('abacus-ext-test-utils');
 
@@ -24,7 +28,20 @@ const servicePlan = process.env.SERVICE_PLAN;
 const abacusUtils = testHelper(undefined, collectorUrl, reportingUrl);
 const config = require('abacus-ext-cf-broker').config;
 
-describe('Abacus Broker Smoke test', () => {
+const argv = clone(process.argv);
+argv.splice(1, 1, 'broker-smoke');
+commander
+  .option('-x, --total-timeout <n>',
+    'test timeout in milliseconds', parseInt)
+  .allowUnknownOption(true)
+  .parse(argv);
+
+// This test timeout
+const totalTimeout = commander.totalTimeout || 300000;
+
+
+describe('Abacus Broker Smoke test', function() {
+  this.timeout(totalTimeout);
   const cfUtils = cmdline.cfutils(api, adminUser, adminUserPassword);
   const testTimestamp = moment.utc().valueOf();
   const serviceInstanceName = `test-${testTimestamp}`;
@@ -79,7 +96,7 @@ describe('Abacus Broker Smoke test', () => {
             const credentials = response.body[Object.keys(response.body)[0]][0]
               .credentials;
 
-            expect(credentials.client_id).to.equal(
+            expect(credentials.client_id).to.contain(
               config.prefixWithResourceProvider(guid));
             clientId = credentials.client_id;
             expect(credentials.client_secret).to.not.equal(null);
@@ -90,7 +107,7 @@ describe('Abacus Broker Smoke test', () => {
             done();
           });
         });
-        
+
       context('and posting usage', () => {
         const consumerId = 'app:1fb61c1f-2db3-4235-9934-00097845b80d';
         const resourceInstanceId = '1fb61c1f-2db3-4235-9934-00097845b80d';
@@ -133,7 +150,6 @@ describe('Abacus Broker Smoke test', () => {
             expect(val.statusCode).to.equal(201);
             done();
           });
-
         });
 
         context('and getting usage', () => {
